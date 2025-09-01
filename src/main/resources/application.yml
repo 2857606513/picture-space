@@ -30,3 +30,10 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.gzx.gzxpicturebackend.controller
+cos:
+  client:
+    host: https://xxxxxx-1333996088.cos.ap-guangzhou.myqcloud.com
+    secretId: AKID78ze8c2X4YIrDON9kBSZTFoAJH5KOGyU
+    secretKey: MWfeQzLUQ9j9oKgsrdCduyqWzTq5AJG3
+    region: ap-guangzhou
+    bucket: xxxxxx-1333996088

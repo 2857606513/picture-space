@@ -150,6 +150,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
         return queryWrapper;
     }
+
+    @Override
+    public boolean isAdmin(User user) {
+        return user!= null && UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
+    }
     //TODO:会员功能开发
     //TODO；用户邀请功能开发
 }
