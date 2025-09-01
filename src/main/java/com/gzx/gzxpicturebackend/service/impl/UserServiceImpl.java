@@ -151,6 +151,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return queryWrapper;
     }
     //TODO:会员功能开发
+    //TODO；用户邀请功能开发
 }
 
 

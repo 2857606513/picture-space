@@ -2,15 +2,11 @@ package com.gzx.gzxpicturebackend.exception;
 
 import lombok.Getter;
 
-/**
- * 自定义业务异常
- */
+
 @Getter
 public class BusinessException extends RuntimeException {
 
-    /**
-     * 错误码
-     */
+
     private final int code;
 
     public BusinessException(int code, String message) {

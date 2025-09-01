@@ -11,11 +11,7 @@ import com.gzx.gzxpicturebackend.model.dto.vo.UserVO;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
-/**
-* @author guozhongxing
-* @description 针对表【user(用户)】的数据库操作Service
-* @createDate 2025-08-31 18:47:34
-*/
+
 public interface UserService extends IService<User> {
     String getEncryptPassword(String userPassword);
     long userResiger(String userAccount, String userPassword, String checkPassword);

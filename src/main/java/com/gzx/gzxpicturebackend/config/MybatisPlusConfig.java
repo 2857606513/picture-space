@@ -11,16 +11,11 @@ import org.springframework.context.annotation.Configuration;
 @MapperScan("com.gzx.gzxpicturebackend.mapper")
 public class MybatisPlusConfig {
 
-    /**
-     * 拦截器配置
-     *
-     * @return {@link MybatisPlusInterceptor}
-     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 分页插件
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        PaginationInnerInterceptor inner = new PaginationInnerInterceptor(DbType.MYSQL);
+        interceptor.addInnerInterceptor(inner);
         return interceptor;
     }
 }

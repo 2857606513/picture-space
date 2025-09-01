@@ -16,14 +16,10 @@ public enum ErrorCode {
     PASSWORD_LENGTH_ERROR(40103, "密码长度不能小于8"),
     OPERATION_ERROR(50001, "操作失败");
 
-    /**
-     * 状态码
-     */
+
     private final int code;
 
-    /**
-     * 信息
-     */
+
     private final String message;
 
     ErrorCode(int code, String message) {
