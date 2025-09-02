@@ -8,5 +8,7 @@ import java.io.Serializable;
 public class PictureUploadRequest  implements Serializable {
     private long id;
     private String fileUrl;
+    private String pictureName;
     public static final long serialVersionUID = 1L;
+
 }

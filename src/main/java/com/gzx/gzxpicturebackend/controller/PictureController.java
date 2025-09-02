@@ -18,10 +18,7 @@ import com.gzx.gzxpicturebackend.exception.ThrowUtils;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.enums.PictureReviewStatusEnum;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureEditRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureReviewRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureUpdateRequest;
+import com.gzx.gzxpicturebackend.model.dto.picture.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureTagCategory;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
 import com.gzx.gzxpicturebackend.service.PictureService;
@@ -158,5 +155,12 @@ public BaseResponse<Boolean> PictureReview(@RequestBody PictureReviewRequest pic
     return ResultUtils.success(true);
 }
 
-
+    @PostMapping("/upload/batch")
+    @AuthCheck(role = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Integer> uploadPictureByBatch(@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
+                                                      HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, userService.getLoginUser(request));
+        return ResultUtils.success(uploadCount);
+    }
 }
