@@ -7,5 +7,6 @@ import java.io.Serializable;
 @Data
 public class PictureUploadRequest  implements Serializable {
     private long id;
+    private String fileUrl;
     public static final long serialVersionUID = 1L;
 }
