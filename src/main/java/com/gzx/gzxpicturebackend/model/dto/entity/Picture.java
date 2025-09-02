@@ -3,6 +3,8 @@ package com.gzx.gzxpicturebackend.model.dto.entity;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.util.Date;
+
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -11,6 +13,7 @@ import lombok.Data;
  */
 @TableName(value ="picture")
 @Data
+
 public class Picture {
     /**
      * id
@@ -95,4 +98,8 @@ public class Picture {
     private Integer isDelete;
 
     private final static long serialVersionUID = 1L;
+    private Integer reviewStatus;
+    private String reviewMessage;
+    private Long reviewerId;
+    private Date reviewTime;
 }

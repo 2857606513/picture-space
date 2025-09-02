@@ -1,5 +1,6 @@
 package com.gzx.gzxpicturebackend.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -10,7 +11,9 @@ import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
+import com.gzx.gzxpicturebackend.model.dto.enums.PictureReviewStatusEnum;
 import com.gzx.gzxpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.gzx.gzxpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.gzx.gzxpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
 import com.gzx.gzxpicturebackend.service.PictureService;
@@ -63,6 +66,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String searchText = pictureQueryRequest.getSearchText();
         String sortField = pictureQueryRequest.getSortField();
         String sortOrder = pictureQueryRequest.getSortOrder();
+        Integer reviewStatus = pictureQueryRequest.getReviewStatus();
+        String reviewMessage = pictureQueryRequest.getReviewMessage();
+        Long reviewerId = pictureQueryRequest.getReviewerId();
         if (StrUtil.isNotBlank(searchText)){
             queryWrapper.and(qw -> qw.like("name", searchText)
                     .or()
@@ -99,7 +105,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             if (ObjUtil.isNotEmpty(pictureScale)) {
                 queryWrapper.eq("pictureScale", pictureScale);
             }
-
+            if (ObjUtil.isNotEmpty(reviewStatus)){
+                queryWrapper.eq("reviewStatus", reviewStatus);
+            }
+            if (StrUtil.isNotBlank(reviewMessage)) {
+                queryWrapper.like("reviewMessage", reviewMessage);
+            }
+            if (ObjUtil.isNotEmpty(reviewerId)) {
+                queryWrapper.eq("reviewerId", reviewerId);
+            }
             // 标签查询 - 使用更安全的方式处理JSON数组匹配
             if (CollUtil.isNotEmpty(tags)) {
                 for (String tag : tags) {
@@ -174,6 +188,48 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Override
     public void deletePicture(Long pictureId, User loginUser) {
 //todo：开启事务删除使用额度
+    }
+//TODO:添加第三方平台的自动审核
+    //TODO：举报机制给举报用户vip兑换码
+    //TODO：审核通知审核完成后通过消息中心发给用户
+    @Override
+    public void pictureReview(PictureReviewRequest pictureReviewRequest, User loginUser) {
+        ThrowUtils.throwIf(ObjUtil.isEmpty(pictureReviewRequest), ErrorCode.PARAMS_ERROR);
+
+        Long id = pictureReviewRequest.getId();
+        Integer reviewStatus = pictureReviewRequest.getReviewStatus();
+        PictureReviewStatusEnum pictureReviewStatusEnum = PictureReviewStatusEnum.getEnumByValue(reviewStatus);
+
+        ThrowUtils.throwIf(pictureReviewStatusEnum == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(id==null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(pictureReviewStatusEnum.equals(PictureReviewStatusEnum.REVIEWING) , ErrorCode.OPERATION_ERROR, "请勿重复操作");
+        Picture pictureId = this.getById(id);
+        ThrowUtils.throwIf(pictureId == null, ErrorCode.NOT_FOUND_ERROR);
+        ThrowUtils.throwIf(pictureId.getReviewStatus().equals(reviewStatus), ErrorCode.PARAMS_ERROR, "请勿重复操作");
+
+        Picture updatePicture = new Picture();
+        updatePicture.setId(id);
+        updatePicture.setReviewStatus(reviewStatus);
+        updatePicture.setReviewerId(loginUser.getId());
+        updatePicture.setReviewTime(new Date());
+        boolean result = this.updateById(updatePicture);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    @Override
+    public void fillReviewParams(Picture picture, User loginUser) {
+        if(userService.isAdmin(loginUser)){
+            picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            picture.setReviewerId(loginUser.getId());
+            picture.setReviewMessage("管理员审核通过");
+            picture.setReviewTime(new Date());
+        }
+        else {
+            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+            picture.setReviewerId(loginUser.getId());
+            picture.setReviewMessage("等待管理员审核");
+            picture.setReviewTime(new Date());
+        }
     }
 
 

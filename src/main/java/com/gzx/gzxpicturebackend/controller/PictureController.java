@@ -20,6 +20,7 @@ import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.enums.PictureReviewStatusEnum;
 import com.gzx.gzxpicturebackend.model.dto.picture.PictureEditRequest;
 import com.gzx.gzxpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.gzx.gzxpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.gzx.gzxpicturebackend.model.dto.picture.PictureUpdateRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureTagCategory;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -59,7 +61,7 @@ public class PictureController {
     @PostMapping("/update")
     @AuthCheck(role = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest,
-                                               HttpServletRequest request) {
+             /*TODO：把操作写入到service*/                                  HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
         Picture picture = new Picture();
         BeanUtils.copyProperties(pictureUpdateRequest, picture);
@@ -67,6 +69,9 @@ public class PictureController {
         pictureService.validPicture(picture);
         Picture oldPicture = pictureService.getById(pictureUpdateRequest.getId());
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+
+        pictureService.fillReviewParams(picture, userService.getLoginUser(request));
+
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -108,7 +113,7 @@ public class PictureController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
             pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
             pictureQueryRequest.setNullSpaceId(true);
-
+pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest));
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
@@ -117,7 +122,20 @@ public class PictureController {
 
     @PostMapping("/edit")
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
+       /*TODO：写到service中*/
         ThrowUtils.throwIf(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
+        Picture picture = new Picture();
+        BeanUtils.copyProperties(pictureEditRequest, picture);
+        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
+        picture.setEditTime(new Date());
+        pictureService.validPicture(picture);
+        Picture oldPicture = pictureService.getById(pictureEditRequest.getId());
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+
+        pictureService.fillReviewParams(picture, userService.getLoginUser(request));
+
+        boolean result = pictureService.updateById(picture);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
 
@@ -130,5 +148,15 @@ public class PictureController {
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
     }
+// TODO: 使用配置中心动态管理图片存储
+@PostMapping("/review")
+@AuthCheck(role = UserConstant.ADMIN_ROLE)
+public BaseResponse<Boolean> PictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
+                                             HttpServletRequest request) {
+    ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+    pictureService.pictureReview(pictureReviewRequest, userService.getLoginUser(request) );
+    return ResultUtils.success(true);
+}
+
 
 }
