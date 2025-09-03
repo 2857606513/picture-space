@@ -5,10 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureReviewRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.gzx.gzxpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.gzx.gzxpicturebackend.model.dto.picture.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -29,7 +26,7 @@ public interface PictureService extends IService<Picture> {
 
     void deletePicture(Long pictureId, User loginUser);
     void pictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
-
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
     void clearPictureFile(Picture oldPicture);
     void fillReviewParams(Picture picture, User loginUser/*TODO:加入空间参数让私人空间是本人的话自动通过审核*/);

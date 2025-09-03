@@ -96,6 +96,10 @@ public class PictureController {
     public BaseResponse<PictureVO> getPictureVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf( pictureService.getById(id) == null, ErrorCode.NOT_FOUND_ERROR);
+        Picture picture = pictureService.getById(id);
+        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+        Long spaceId = picture.getSpaceId();
+
         PictureVO pictureVO = pictureService.getPictureVO(pictureService.getById(id), request);
         return ResultUtils.success(pictureVO);
     }
@@ -127,18 +131,8 @@ pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
        /*TODO：写到service中*/
         ThrowUtils.throwIf(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
-        Picture picture = new Picture();
-        BeanUtils.copyProperties(pictureEditRequest, picture);
-        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
-        picture.setEditTime(new Date());
-        pictureService.validPicture(picture);
-        Picture oldPicture = pictureService.getById(pictureEditRequest.getId());
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-
-        pictureService.fillReviewParams(picture, userService.getLoginUser(request));
-
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+      User loginUser = userService.getLoginUser(request);
+      pictureService.editPicture(pictureEditRequest, loginUser);
         return ResultUtils.success(true);
     }
 

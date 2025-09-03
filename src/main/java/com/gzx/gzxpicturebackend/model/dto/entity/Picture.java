@@ -103,4 +103,5 @@ public class Picture {
     private Long reviewerId;
     private Date reviewTime;
     private String thumbnailUrl;
+    private Long spaceId;
 }
