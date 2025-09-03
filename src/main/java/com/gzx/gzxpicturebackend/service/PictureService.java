@@ -31,5 +31,6 @@ public interface PictureService extends IService<Picture> {
     void pictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
 
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
+    void clearPictureFile(Picture oldPicture);
     void fillReviewParams(Picture picture, User loginUser/*TODO:加入空间参数让私人空间是本人的话自动通过审核*/);
 }

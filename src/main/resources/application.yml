@@ -2,6 +2,9 @@ server:
   port: 8123
   servlet:
     context-path: /api
+    session:
+     cookie:
+      max-age: 2592000
 spring:
   application:
     name: gzx-picture-backend
@@ -11,6 +14,14 @@ spring:
     url: jdbc:mysql://localhost:3306/gzx_picture
     username: root
     password: 1234
+  redis:
+    database: 0
+    host: localhost
+    port: 6379
+    timeout: 5000
+  session:
+    store-type: redis
+    time-to-live: 2592000
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false

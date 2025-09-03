@@ -72,7 +72,7 @@ public abstract class PictureUploadTemplate {
                 if (objectList.size() > 1) {
                     thumbnailCiObject = objectList.get(1);
                 }
-                // 封装压缩图的返回结果
+                // 封装压缩图的返回结果TODO:只保存原图地址供下载使用保留压缩图2.用CDN加速查找图片在CDN上配置浏览器缓存
                 return buildResult(originalFilename, compressedCiObject, thumbnailCiObject, imageInfo);
             }
             return buildResult(originalFilename, file, uploadPath, imageInfo);
@@ -85,6 +85,7 @@ public abstract class PictureUploadTemplate {
         }
 
     }
+    //  TODO：大文件的上传分片上传和断电续传
 
     /**
      * 校验输入源（本地文件或 URL）

@@ -102,4 +102,5 @@ public class Picture {
     private String reviewMessage;
     private Long reviewerId;
     private Date reviewTime;
+    private String thumbnailUrl;
 }

@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gzx.gzxpicturebackend.exception.BusinessException;
 import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
+import com.gzx.gzxpicturebackend.manager.CosManager;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.enums.PictureReviewStatusEnum;
@@ -26,6 +27,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -49,6 +51,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private UserService userService;
+    @Resource
+    private CosManager cosManager;
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
        //TODO：添加图片上传功能
@@ -298,6 +302,26 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             picture.setReviewerId(loginUser.getId());
             picture.setReviewMessage("等待管理员审核");
             picture.setReviewTime(new Date());
+        }
+    }
+    @Async
+    @Override
+    public void clearPictureFile(Picture oldPicture) {
+        // 判断改图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        long count = this.lambdaQuery()
+                .eq(Picture::getUrl, pictureUrl)
+                .count();
+        // 有不止一条记录用到了该图片，不清理
+        if (count > 1) {
+            return;
+        }//TODO:重新上传时清理上传失败的图片2.用Sprig Scheduler定时清理图片3.用定时任务定时清理图片4.提供一个controller手动清理4.设置一个批量删除的接口
+        // 删除图片TODO：去除pictureUrl中的域名只删除key
+        cosManager.deleteObject(pictureUrl);
+        // 删除缩略图
+        String thumbnailUrl = oldPicture.getThumbnailUrl();
+        if (StrUtil.isNotBlank(thumbnailUrl)) {
+            cosManager.deleteObject(thumbnailUrl);
         }
     }
 
