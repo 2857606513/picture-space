@@ -26,6 +26,9 @@ import com.gzx.gzxpicturebackend.service.PictureService;
 import com.gzx.gzxpicturebackend.mapper.PictureMapper;
 import com.gzx.gzxpicturebackend.service.SpaceService;
 import com.gzx.gzxpicturebackend.service.UserService;
+import com.gzx.gzxpicturebackend.utils.ColorSimilarUtils;
+import com.gzx.gzxpicturebackend.utils.ColorTransformUtils;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -38,11 +41,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.awt.*;
 import java.io.IOException;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -147,7 +149,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPictureFormat(uploadPictureResult.getPictureFormat());
 //        picture.setPicColor(uploadPictureResult.getPicColor());
         // 转换为标准颜色
-//        picture.setPictureColor(ColorTransformUtils.getStandardColor(uploadPictureResult.getPicColor()));
+        picture.setPictureColor(ColorTransformUtils.getStandardColor(uploadPictureResult.getPictureColor()));
         picture.setUserId(loginUser.getId());
         // 补充审核参数
         this.fillReviewParams(picture, loginUser);
@@ -204,6 +206,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String sortOrder = pictureQueryRequest.getSortOrder();
         boolean nullSpaceId = pictureQueryRequest.isNullSpaceId();
         Integer reviewStatus = pictureQueryRequest.getReviewStatus();
+        Date startEditTime = pictureQueryRequest.getStartEditTime();
+        Date endEditTime = pictureQueryRequest.getEndEditTime();
         String reviewMessage = pictureQueryRequest.getReviewMessage();
         Long reviewerId = pictureQueryRequest.getReviewerId();
         if (StrUtil.isNotBlank(searchText)){
@@ -214,6 +218,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             // 基本条件查询
             if (ObjUtil.isNotEmpty(id)) {
                 queryWrapper.eq("id", id);
+            }
+            if (ObjUtil.isNotEmpty(startEditTime)){
+                queryWrapper.ge("editTime", startEditTime);
+            }
+            if (ObjUtil.isNotEmpty(endEditTime)){
+                queryWrapper.lt("editTime", endEditTime);
             }
             if (ObjUtil.isNotEmpty(spaceId)){
                 queryWrapper.eq("spaceId", spaceId);
@@ -496,6 +506,47 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (StrUtil.isNotBlank(thumbnailUrl)) {
             cosManager.deleteObject(thumbnailUrl);
         }
+    }
+
+    @Override
+    public List<PictureVO> searchPictureByColor(Long spaceId, String pictureColor, User loginUser) {
+        //TODO:把颜色搜索也应用到公共图库和管理员2.多模态搜索3.定义颜色的阈值排除不相似的图片
+        ThrowUtils.throwIf(spaceId == null || StrUtil.isBlank(pictureColor), ErrorCode.PARAMS_ERROR, "参数错误");
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR, "用户未登录");
+        // 2. 校验空间权限
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        ThrowUtils.throwIf(!space.getUserId().equals(loginUser.getId()),ErrorCode.NO_AUTH_ERROR,"没有空间访问权限");
+        // 3. 查询该空间下的所有图片（必须要有主色调）
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("spaceId", spaceId);
+        queryWrapper.isNotNull("pictureColor");
+        List<Picture> pictureList = this.list(queryWrapper);
+        // 如果没有图片，直接返回空列表
+        if (CollUtil.isEmpty(pictureList)) {
+            return new ArrayList<>();
+        }
+        // 将颜色字符串转换为主色调
+        Color targetColor = Color.decode(pictureColor);
+        // 4. 计算相似度并排序
+        List<Picture> sortedPictureList = pictureList.stream()
+                .sorted(Comparator.comparingDouble(picture -> {
+                    String hexColor = picture.getPictureColor();
+                    // 没有主色调的图片会默认排序到最后
+                    if (StrUtil.isBlank(hexColor)) {
+                        return Double.MAX_VALUE;
+                    }
+                    Color currentPictureColor = Color.decode(hexColor);
+                    // 计算相似度
+                    // 越大越相似
+                    return -ColorSimilarUtils.calculateSimilarity(targetColor, currentPictureColor);
+                }))
+                .limit(12) // 取前 12 个
+                .collect(Collectors.toList());
+        // 5. 返回结果
+        return sortedPictureList.stream()
+                .map(PictureVO::objToVo)
+                .collect(Collectors.toList());
     }
 
 

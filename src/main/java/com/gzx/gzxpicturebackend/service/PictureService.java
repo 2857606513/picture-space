@@ -9,6 +9,7 @@ import com.gzx.gzxpicturebackend.model.dto.picture.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author guozhongxing
@@ -29,5 +30,6 @@ public interface PictureService extends IService<Picture> {
     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
     void clearPictureFile(Picture oldPicture);
+    List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
     void fillReviewParams(Picture picture, User loginUser/*TODO:加入空间参数让私人空间是本人的话自动通过审核*/);
 }

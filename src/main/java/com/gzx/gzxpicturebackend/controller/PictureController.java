@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.gzx.gzxpicturebackend.annotation.AuthCheck;
+import com.gzx.gzxpicturebackend.api.imagesearch.ImageSearchApiFacade;
+import com.gzx.gzxpicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.gzx.gzxpicturebackend.common.BaseResponse;
 import com.gzx.gzxpicturebackend.common.DeleteRequest;
 import com.gzx.gzxpicturebackend.common.ResultUtils;
@@ -163,7 +165,30 @@ public BaseResponse<Boolean> PictureReview(@RequestBody PictureReviewRequest pic
         int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, userService.getLoginUser(request));
         return ResultUtils.success(uploadCount);
     }
+@PostMapping("/search/picture")
+public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureRequest searchPictureRequest) {
+        // 参数校验
+    ThrowUtils.throwIf(searchPictureRequest == null, ErrorCode.PARAMS_ERROR);
+    // 图片id
+    Long pictureId = searchPictureRequest.getPictureId();
 
+    ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+    Picture picture = pictureService.getById(pictureId);
+
+    ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+    // 调用图片搜索接口
+    List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getUrl());
+    return ResultUtils.success(resultList);
+}
+@PostMapping("/search/color")
+public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureRequest searchPictureByColorRequest, HttpServletRequest request) {
+    ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
+    String pictureColor = searchPictureByColorRequest.getPictureColor();
+    Long spaceId = searchPictureByColorRequest.getSpaceId();
+    User loginUser = userService.getLoginUser(request);
+    List<PictureVO> pictureVOList = pictureService.searchPictureByColor(spaceId, pictureColor, loginUser);
+    return ResultUtils.success(pictureVOList);
+}
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                                       HttpServletRequest request) {
@@ -216,4 +241,5 @@ public BaseResponse<Boolean> PictureReview(@RequestBody PictureReviewRequest pic
             .initialCapacity(512)
             .build();
     //TODO:手动刷新缓存的接口仅管理员调用
+
 }
