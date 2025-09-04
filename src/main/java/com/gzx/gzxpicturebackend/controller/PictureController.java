@@ -1,6 +1,7 @@
 package com.gzx.gzxpicturebackend.controller;
 
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
@@ -10,6 +11,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.gzx.gzxpicturebackend.annotation.AuthCheck;
+import com.gzx.gzxpicturebackend.api.aliyunai.AliYunAiApi;
+import com.gzx.gzxpicturebackend.api.aliyunai.model.AiOutPaintingResponse;
+import com.gzx.gzxpicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.gzx.gzxpicturebackend.api.imagesearch.ImageSearchApiFacade;
 import com.gzx.gzxpicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.gzx.gzxpicturebackend.common.BaseResponse;
@@ -54,6 +58,8 @@ public class PictureController {
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private PictureService pictureService;
+    @Resource
+    private AliYunAiApi aliYunAiApi;
     @PostMapping("/delete")
     public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest
         , HttpServletRequest request) {
@@ -198,6 +204,7 @@ public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPic
         pictureService.batchEditPictureMetadata(pictureBatchEditRequest,spaceId,loginUserId);
         return ResultUtils.success(true);
     }
+
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                                       HttpServletRequest request) {
@@ -250,5 +257,25 @@ public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPic
             .initialCapacity(512)
             .build();
     //TODO:手动刷新缓存的接口仅管理员调用
+    /**
+     * 创建 AI 扩图任务
+     */
+    @PostMapping("/out_painting/create_task")
+//    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
+    public BaseResponse<AiOutPaintingResponse> aiPictureOutPainting(@RequestBody AiPictureOutPaintingRequest aiPictureOutPaintingRequest,
+                                                                            HttpServletRequest request) {
+        ThrowUtils.throwIf(aiPictureOutPaintingRequest == null || aiPictureOutPaintingRequest.getPictureId() == null,ErrorCode.PARAMS_ERROR,"请选择图片");
+        User loginUser = userService.getLoginUser(request);
+        AiOutPaintingResponse response = pictureService.aiOutPaintingResponse(aiPictureOutPaintingRequest, loginUser);
+        return ResultUtils.success(response);
+    }
 
+    /**
+     * 查询 AI 扩图任务
+     */
+    @GetMapping("/out_painting/get_task")
+    public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
+        ThrowUtils.throwIf(StrUtil.isBlank(taskId), ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(aliYunAiApi.getOutPaintingTask(taskId));
+    }
 }

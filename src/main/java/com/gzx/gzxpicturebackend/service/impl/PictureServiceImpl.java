@@ -8,6 +8,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.gzx.gzxpicturebackend.api.aliyunai.AliYunAiApi;
+import com.gzx.gzxpicturebackend.api.aliyunai.model.AiOutPaintingRequest;
+import com.gzx.gzxpicturebackend.api.aliyunai.model.AiOutPaintingResponse;
 import com.gzx.gzxpicturebackend.exception.BusinessException;
 import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
@@ -69,7 +72,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private FilePictureUpload filePictureUpload;
     @Resource
     private ThreadPoolExecutor customExecutor;
-
+    @Resource
+    private AliYunAiApi aliYunAiApi;
     @Resource
     private UrlPictureUpload urlPictureUpload;
     @Resource
@@ -633,6 +637,24 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             log.error("名称解析错误", e);
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析错误");
         }
+    }
+    @Override
+    public AiOutPaintingResponse aiOutPaintingResponse(AiPictureOutPaintingRequest aiPictureOutPaintingRequest, User loginUser) {
+        // 获取图片信息
+        //TODO:加入注解鉴权和优化代码
+        Long pictureId = aiPictureOutPaintingRequest.getPictureId();
+        Picture picture = Optional.ofNullable(this.getById(pictureId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
+        // 校验权限，已经改为使用注解鉴权
+//        checkPictureAuth(loginUser, picture);
+        // 创建扩图任务
+        AiOutPaintingRequest aiOutPaintingRequest = new AiOutPaintingRequest();
+        AiOutPaintingRequest.Input input = new AiOutPaintingRequest.Input();
+        input.setImageUrl(picture.getUrl());
+        aiOutPaintingRequest.setInput(input);
+        aiOutPaintingRequest.setParameters(aiPictureOutPaintingRequest.getParameters());
+        // 创建任务
+        return aliYunAiApi.aiOutPaintingTask(aiOutPaintingRequest);
     }
    }
 

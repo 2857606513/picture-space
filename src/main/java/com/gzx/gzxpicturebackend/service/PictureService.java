@@ -2,6 +2,7 @@ package com.gzx.gzxpicturebackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.gzx.gzxpicturebackend.api.aliyunai.model.AiOutPaintingResponse;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
@@ -37,4 +38,6 @@ public interface PictureService extends IService<Picture> {
 
     @Transactional(rollbackFor = Exception.class)
     void batchEditPictureMetadata(PictureBatchEditRequest request, Long spaceId, Long loginUserId);
+
+    AiOutPaintingResponse aiOutPaintingResponse(AiPictureOutPaintingRequest createPictureOutPaintingTaskRequest, User loginUser);
 }

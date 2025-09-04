@@ -53,3 +53,5 @@ thread-pool:
   max-pool-size: 20
   keep-alive-time: 60
   queue-capacity: 200
+aliYunAi:
+  accessKeyId: sk-c4da55704c6e4359955d3aa10b462243
