@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.picture.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -31,5 +32,9 @@ public interface PictureService extends IService<Picture> {
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
     void clearPictureFile(Picture oldPicture);
     List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
     void fillReviewParams(Picture picture, User loginUser/*TODO:加入空间参数让私人空间是本人的话自动通过审核*/);
+
+    @Transactional(rollbackFor = Exception.class)
+    void batchEditPictureMetadata(PictureBatchEditRequest request, Long spaceId, Long loginUserId);
 }

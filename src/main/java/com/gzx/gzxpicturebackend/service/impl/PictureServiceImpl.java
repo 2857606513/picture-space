@@ -28,7 +28,6 @@ import com.gzx.gzxpicturebackend.service.SpaceService;
 import com.gzx.gzxpicturebackend.service.UserService;
 import com.gzx.gzxpicturebackend.utils.ColorSimilarUtils;
 import com.gzx.gzxpicturebackend.utils.ColorTransformUtils;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -37,6 +36,7 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
@@ -45,6 +45,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
@@ -65,6 +67,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private SpaceService spaceService;
     @Resource
     private FilePictureUpload filePictureUpload;
+    @Resource
+    private ThreadPoolExecutor customExecutor;
 
     @Resource
     private UrlPictureUpload urlPictureUpload;
@@ -549,8 +553,65 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 .collect(Collectors.toList());
     }
 
+   @Transactional(rollbackFor = Exception.class)
+   @Override
+   public void batchEditPictureMetadata(PictureBatchEditRequest request, Long spaceId, Long loginUserId) {
+        // 参数校验
+       validateBatchEditRequest(request, spaceId, loginUserId);
+       // 查询空间下的图片
+        List<Picture> pictureList = this.lambdaQuery()
+                .eq(Picture::getSpaceId, spaceId)
+                .in(Picture::getId, request.getPictureIds())
+                .list();
+         ThrowUtils.throwIf(pictureList.isEmpty(),ErrorCode.NOT_FOUND_ERROR, "指定的图片不存在或不属于该空间");
 
-}
+        int batchSize = 100;
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+       log.info("开始批量编辑图片，总图片数: {}, 批次大小: {}", pictureList.size(), batchSize);
+        for (int i = 0; i < pictureList.size(); i += batchSize) {
+            List<Picture> batch = pictureList.subList(i, Math.min(i + batchSize, pictureList.size()));
+
+            int batchIndex = i / batchSize + 1;
+            int totalBatches = (int) Math.ceil((double) pictureList.size() / batchSize);
+            log.info("处理第 {}/{} 批次，批次大小: {}", batchIndex, totalBatches, batch.size());
+
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                try {
+                    log.debug("开始处理批次 {}，包含 {} 张图片", batchIndex, batch.size());
+
+                    batch.forEach(picture -> {
+                        // 编辑分类和标签
+                        if (request.getCategory() != null) {
+                            picture.setCategory(request.getCategory());
+                            log.debug("设置图片 {} 的分类为: {}", picture.getId(), request.getCategory());
+                        }
+                        if (request.getTags() != null) {
+                            picture.setTags(String.join(",", request.getTags()));
+                        }
+                    });
+                    log.debug("开始批量更新第 {} 批次数据", batchIndex);
+                    boolean result = this.updateBatchById(batch);
+                    if (!result) {
+                        log.error("批量更新第 {} 批次图片失败", batchIndex);
+                        throw new BusinessException(ErrorCode.OPERATION_ERROR, "批量更新图片失败");
+                    }
+                    log.info("第 {}/{} 批次处理完成，更新 {} 张图片", batchIndex, totalBatches, batch.size());
+                } catch (Exception e) {
+                    log.error("处理批次 {} 失败", batchIndex, e);
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "处理批次失败");
+                }
+                }, customExecutor);
+            futures.add(future);
+        }    // 等待所有任务完成
+       CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();}
+    private void validateBatchEditRequest(PictureBatchEditRequest request, Long spaceId, Long loginUserId) {
+        ThrowUtils.throwIf(request == null||spaceId==null||loginUserId==null, ErrorCode.PARAMS_ERROR, "参数错误");
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        ThrowUtils.throwIf(!space.getUserId().equals(loginUserId),ErrorCode.NO_AUTH_ERROR,"没有空间访问权限");
+    }
+   }
+
 
 
 

@@ -189,6 +189,15 @@ public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPic
     List<PictureVO> pictureVOList = pictureService.searchPictureByColor(spaceId, pictureColor, loginUser);
     return ResultUtils.success(pictureVOList);
 }
+    @PostMapping("/edit/batch")
+    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureBatchEditRequest pictureBatchEditRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureBatchEditRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        Long spaceId = pictureBatchEditRequest.getSpaceId();
+        Long loginUserId = loginUser.getId();
+        pictureService.batchEditPictureMetadata(pictureBatchEditRequest,spaceId,loginUserId);
+        return ResultUtils.success(true);
+    }
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                                       HttpServletRequest request) {

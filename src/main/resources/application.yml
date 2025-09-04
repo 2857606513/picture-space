@@ -48,3 +48,8 @@ cos:
     secretKey: MWfeQzLUQ9j9oKgsrdCduyqWzTq5AJG3
     region: ap-guangzhou
     bucket: xxxxxx-1333996088
+thread-pool:
+  core-pool-size: 10
+  max-pool-size: 20
+  keep-alive-time: 60
+  queue-capacity: 200
