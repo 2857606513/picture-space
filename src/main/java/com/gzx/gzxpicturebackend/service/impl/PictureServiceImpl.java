@@ -563,7 +563,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 .eq(Picture::getSpaceId, spaceId)
                 .in(Picture::getId, request.getPictureIds())
                 .list();
+
          ThrowUtils.throwIf(pictureList.isEmpty(),ErrorCode.NOT_FOUND_ERROR, "指定的图片不存在或不属于该空间");
+
 
         int batchSize = 100;
         List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -602,13 +604,35 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 }
                 }, customExecutor);
             futures.add(future);
-        }    // 等待所有任务完成
-       CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();}
+        }
+
+       // 等待所有任务完成
+       CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        String nameRule = request.getNameRule();
+       fillPictureWithNameRule(pictureList, nameRule);
+
+       this.updateBatchById(pictureList);
+    }
     private void validateBatchEditRequest(PictureBatchEditRequest request, Long spaceId, Long loginUserId) {
         ThrowUtils.throwIf(request == null||spaceId==null||loginUserId==null, ErrorCode.PARAMS_ERROR, "参数错误");
         Space space = spaceService.getById(spaceId);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
         ThrowUtils.throwIf(!space.getUserId().equals(loginUserId),ErrorCode.NO_AUTH_ERROR,"没有空间访问权限");
+    }
+    private void fillPictureWithNameRule(List<Picture> pictureList, String nameRule) {
+        if (StrUtil.isBlank(nameRule) || CollUtil.isEmpty(pictureList)) {
+            return;
+        }
+        long count = 1;
+        try {
+            for (Picture picture : pictureList) {
+                String pictureName = nameRule.replaceAll("\\{序号}", String.valueOf(count++));
+                picture.setName(pictureName);
+            }
+        } catch (Exception e) {
+            log.error("名称解析错误", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析错误");
+        }
     }
    }
 
