@@ -122,6 +122,12 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
     }
 
+    @Override
+    public void checkSpaceAuth(User loginUser, Space space) {
+        // 仅本人或管理员可编辑
+        ThrowUtils.throwIf(!space.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser),ErrorCode.NO_AUTH_ERROR,"没有空间访问权限");
+    }
+
 //TODO：实现删除空间并清理空间内的图片
     //TODO：实现更新空间并用事务更新时减少原理图片的额度增加新增图片的额度，异步删除原有图片
 }
