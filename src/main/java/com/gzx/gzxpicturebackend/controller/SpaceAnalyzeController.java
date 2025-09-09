@@ -4,6 +4,7 @@ import com.gzx.gzxpicturebackend.common.BaseResponse;
 import com.gzx.gzxpicturebackend.common.ResultUtils;
 import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
+import com.gzx.gzxpicturebackend.model.dto.entity.Space;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.space.analyze.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.*;
@@ -53,5 +54,19 @@ public class SpaceAnalyzeController {
         List<SpaceSizeAnalyzeResponse> spaceSizeAnalyzeResponse = spaceAnalyzeService.spaceSizeAnalyze(spaceSizeAnalyzeRequest, loginUser);
         return ResultUtils.success(spaceSizeAnalyzeResponse);
 
+    }
+    @PostMapping("/user")
+    public BaseResponse<List<SpaceUserAnalyzeResponse> >spaceUserAnalyze(@RequestBody SpaceUserAnalyzeRequest spaceUserAnalyzeRequest, HttpServletRequest  request){
+        ThrowUtils.throwIf(spaceUserAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        List<SpaceUserAnalyzeResponse> spaceUserAnalyzeResponse = spaceAnalyzeService.spaceUserAnalyze(spaceUserAnalyzeRequest, loginUser);
+        return ResultUtils.success(spaceUserAnalyzeResponse);
+    }
+    @PostMapping("/rank")
+    public BaseResponse<List<Space> >getAllSpaces(@RequestBody SpaceRankAnalyzeRequest spaceRankAnalyzeRequest, HttpServletRequest  request){
+        ThrowUtils.throwIf(spaceRankAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        List<Space> allSpaces = spaceAnalyzeService.getAllSpaces(spaceRankAnalyzeRequest, loginUser);
+        return ResultUtils.success(allSpaces);
     }
 }

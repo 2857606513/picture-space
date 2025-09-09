@@ -13,14 +13,12 @@ import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.gzx.gzxpicturebackend.model.dto.entity.Space;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.space.analyze.*;
-import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.SpaceCategoryAnalyzeResponse;
-import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.SpaceSizeAnalyzeResponse;
-import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.SpaceTagAnalyzeResponse;
-import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.SpaceUsageAnalyzeResponse;
+import com.gzx.gzxpicturebackend.model.dto.vo.space.analyze.*;
 import com.gzx.gzxpicturebackend.service.PictureService;
 import com.gzx.gzxpicturebackend.service.SpaceAnalyzeService;
 import com.gzx.gzxpicturebackend.service.SpaceService;
 import com.gzx.gzxpicturebackend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -38,6 +36,7 @@ import java.util.stream.Stream;
 * @description 针对表【space(空间)】的数据库操作Service实现
 * @createDate 2025-09-03 10:22:03
 */
+@Slf4j
 @Service
 public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
     implements SpaceAnalyzeService {
@@ -210,6 +209,66 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
     }
 
     @Override
+    public List<SpaceUserAnalyzeResponse> spaceUserAnalyze(SpaceUserAnalyzeRequest spaceUserAnalyzeRequest, User loginUser) {
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        ThrowUtils.throwIf(spaceUserAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        checkSpaceAnalyzeAuth(spaceUserAnalyzeRequest, loginUser);
+
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        Long userId = spaceUserAnalyzeRequest.getUserId();
+        queryWrapper.eq(ObjUtil.isNotNull(userId) , "userId", userId);
+        fillAnalyzeQueryWrapper(spaceUserAnalyzeRequest, queryWrapper);
+
+        String timeDimension = spaceUserAnalyzeRequest.getTimeDimension();
+
+        final String PERIOD_FIELD = "period";
+        final String COUNT_FIELD = "count";
+
+        switch (timeDimension) {
+            case "day":
+                queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m-%d') as " + PERIOD_FIELD, "count(*) as " + COUNT_FIELD);
+                break;
+            case "week":
+                queryWrapper.select("YEARWEEK(createTime) as " + PERIOD_FIELD, "count(*) as " + COUNT_FIELD);
+                break;
+            case "month":
+                queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m') as " + PERIOD_FIELD, "count(*) as " + COUNT_FIELD);
+                break;
+            default:
+                // 日志记录详细错误，对外返回通用错误
+                log.warn("Unsupported time dimension: {}", timeDimension);
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "时间维度参数错误");
+        }
+
+        // 分组排序
+        queryWrapper.groupBy(PERIOD_FIELD).orderByAsc(PERIOD_FIELD);
+
+        // 查询并封装结果
+        List<Map<String, Object>> queryResult = pictureService.getBaseMapper().selectMaps(queryWrapper);
+        return queryResult
+                .stream()
+                .map(result -> {
+                    Object periodObj = result.get(PERIOD_FIELD);
+                    Object countObj = result.get(COUNT_FIELD);
+
+                    if (periodObj == null || countObj == null) {
+                        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "查询结果字段缺失");
+                    }
+
+                    String period = periodObj.toString();
+                    long count;
+                    try {
+                        count = ((Number) countObj).longValue();
+                    } catch (ClassCastException e) {
+                        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "count字段类型错误");
+                    }
+
+                    return new SpaceUserAnalyzeResponse(period, count);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<SpaceSizeAnalyzeResponse> spaceSizeAnalyze(SpaceSizeAnalyzeRequest spaceSizeAnalyzeRequest, User loginUser) {
       ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
       ThrowUtils.throwIf(spaceSizeAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
@@ -250,6 +309,23 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
       return sizeRanges.entrySet().stream()
               .map(entry -> new SpaceSizeAnalyzeResponse(entry.getKey(), entry.getValue()))
               .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Space> getAllSpaces(SpaceRankAnalyzeRequest spaceRankAnalyzeRequest, User loginUser) {
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        ThrowUtils.throwIf(spaceRankAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(!loginUser.getUserRole().equals("admin"), ErrorCode.NO_AUTH_ERROR);
+
+        Integer topN = spaceRankAnalyzeRequest.getTopN();
+        ThrowUtils.throwIf(topN == null || topN <= 0 || topN > 10000, ErrorCode.PARAMS_ERROR, "topN参数必须在1-10000之间");
+
+
+        QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id", "spaceName", "totalCount", "totalSize")
+                .orderByDesc("totalCount", "totalSize")
+                .last("LIMIT" + topN);
+        return spaceService.list(queryWrapper);
     }
 
 
