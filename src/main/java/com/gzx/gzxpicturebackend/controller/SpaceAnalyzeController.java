@@ -19,7 +19,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
-@RestController
+@RestController//todo:添加sa-token
 @RequestMapping("/space/analyze")
 public class SpaceAnalyzeController {
     @Resource

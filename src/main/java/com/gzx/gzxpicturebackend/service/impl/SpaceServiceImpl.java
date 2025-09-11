@@ -3,23 +3,28 @@ package com.gzx.gzxpicturebackend.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.gzx.gzxpicturebackend.exception.BusinessException;
 import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
+import com.gzx.gzxpicturebackend.manager.sharding.DynamicShardingManager;
 import com.gzx.gzxpicturebackend.model.dto.entity.Space;
+import com.gzx.gzxpicturebackend.model.dto.entity.SpaceUser;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.enums.SpaceLevelEnum;
+import com.gzx.gzxpicturebackend.model.dto.enums.SpaceRoleEnum;
 import com.gzx.gzxpicturebackend.model.dto.enums.SpaceTypeEnum;
 import com.gzx.gzxpicturebackend.model.dto.space.SpaceAddRequest;
+import com.gzx.gzxpicturebackend.model.dto.vo.SpaceVO;
+import com.gzx.gzxpicturebackend.model.dto.vo.UserVO;
 import com.gzx.gzxpicturebackend.service.SpaceService;
 import com.gzx.gzxpicturebackend.mapper.SpaceMapper;
+import com.gzx.gzxpicturebackend.service.SpaceUserService;
 import com.gzx.gzxpicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +41,10 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     private TransactionTemplate transactionTemplate;
     @Resource
     private UserService userService;
+    @Resource
+    private SpaceUserService spaceUserService;
+    @Resource
+    private DynamicShardingManager dynamicShardingManager;
     Map<Long ,Object> lockMap = new ConcurrentHashMap<>();
     @Override
     public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {//TODO：多传入一个用户ID，管理员为用户创建空间在controller上控制好权限
@@ -74,6 +83,16 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // 创建
                 boolean result = this.save(space);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "保存空间到数据库失败");
+                if (SpaceTypeEnum.TEAM.getValue() == space.getSpaceType()) {
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setUserId(userId);
+                    //todo:这里不该直接给管理员身份，要不用户创建完空间就有了其他的管理员权限应该只给在团队空间里的管理员权限
+                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
+                }
+                dynamicShardingManager.createSpacePictureTable(space);
                 return space.getId();
             });
             return Optional.ofNullable(newSpaceId).orElse(-1L);
@@ -122,6 +141,18 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
     }
 
+    @Override
+    public SpaceVO getSpaceVO(Space space, HttpServletRequest request) {
+        // 对象转封装类
+        SpaceVO spaceVO = SpaceVO.objToVo(space);
+        // 关联查询用户信息
+        Long userId = space.getUserId();
+        if (userId != null && userId > 0) {
+            UserVO userVO = userService.getUserVO(userService.getById(userId));
+            spaceVO.setUser(userVO);
+        }
+        return spaceVO;
+    }
     @Override
     public void checkSpaceAuth(User loginUser, Space space) {
         // 仅本人或管理员可编辑
