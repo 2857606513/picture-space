@@ -13,6 +13,7 @@ import com.gzx.gzxpicturebackend.model.dto.enums.SpaceLevelEnum;
 import com.gzx.gzxpicturebackend.model.dto.enums.SpaceRoleEnum;
 import com.gzx.gzxpicturebackend.model.dto.enums.SpaceTypeEnum;
 import com.gzx.gzxpicturebackend.model.dto.space.SpaceAddRequest;
+import com.gzx.gzxpicturebackend.model.dto.space.SpaceUpdateRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.SpaceVO;
 import com.gzx.gzxpicturebackend.model.dto.vo.UserVO;
 import com.gzx.gzxpicturebackend.service.SpaceService;
@@ -20,6 +21,7 @@ import com.gzx.gzxpicturebackend.mapper.SpaceMapper;
 import com.gzx.gzxpicturebackend.service.SpaceUserService;
 import com.gzx.gzxpicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -40,11 +42,14 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     @Resource
     private TransactionTemplate transactionTemplate;
     @Resource
+    @Lazy
     private UserService userService;
     @Resource
     private SpaceUserService spaceUserService;
-    @Resource
-    private DynamicShardingManager dynamicShardingManager;
+//    @Resource
+//    @Lazy
+//    private DynamicShardingManager dynamicShardingManager;
+
     Map<Long ,Object> lockMap = new ConcurrentHashMap<>();
     @Override
     public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {//TODO：多传入一个用户ID，管理员为用户创建空间在controller上控制好权限
@@ -92,7 +97,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                     result = spaceUserService.save(spaceUser);
                     ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
                 }
-                dynamicShardingManager.createSpacePictureTable(space);
+             //  dynamicShardingManager.createSpacePictureTable(space);
                 return space.getId();
             });
             return Optional.ofNullable(newSpaceId).orElse(-1L);
@@ -100,6 +105,23 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 lockMap.remove(userId);
             }
         }
+    }
+
+    @Override
+    public void updateSpace(SpaceUpdateRequest spaceUpdateRequest, HttpServletRequest request) {
+        Space space = new Space();
+        BeanUtils.copyProperties(spaceUpdateRequest, space);
+        // 自动填充数据
+        this.fillSpaceBySpaceLevel(space);
+        // 数据校验
+        this.validSpace(space, false);
+        // 判断是否存在
+        long id = spaceUpdateRequest.getId();
+        Space oldSpace = this.getById(id);
+        ThrowUtils.throwIf(oldSpace == null, ErrorCode.NOT_FOUND_ERROR);
+        // 操作数据库
+        boolean result = this.updateById(space);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
     }
 
     @Override

@@ -15,5 +15,15 @@ public interface SpaceAnalyzeService extends IService<Space> {
     List<SpaceUserAnalyzeResponse> spaceUserAnalyze(SpaceUserAnalyzeRequest spaceUserAnalyzeRequest, User loginUser);
     List<SpaceSizeAnalyzeResponse> spaceSizeAnalyze(SpaceSizeAnalyzeRequest spaceSizeAnalyzeRequest, User loginUser);
     List<Space> getAllSpaces(SpaceRankAnalyzeRequest spaceRankAnalyzeRequest,User loginUser);
-    // TODO: 根据空间级别进行分析，对图片的审核状态进行分析分类统计（按时间维度分析审核量的变化），按照时间统计用户登录次数、图片上传量和活跃度仅管理员调用识别高活跃度用户
+    List<SpaceLevelAnalyzeResponse> spaceLevelAnalyze(SpaceLevelAnalyzeRequest spaceLevelAnalyzeRequest, User loginUser);
+    
+    /**
+     * 图片审核状态分析（按时间维度）
+     */
+    List<PictureReviewAnalyzeResponse> pictureReviewAnalyze(PictureReviewAnalyzeRequest request, User loginUser);
+    
+    /**
+     * 用户活跃度分析（仅管理员）
+     */
+    List<UserActivityAnalyzeResponse> userActivityAnalyze(UserActivityAnalyzeRequest request, User loginUser);
 }

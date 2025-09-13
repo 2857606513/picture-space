@@ -7,7 +7,11 @@ import lombok.Getter;
 public enum FileUploadBizEnum {
    AVATAR("头像","/uploads/avatars"),
     PICTURE("图片", "/uploads/pictures"),
-    THUMBNAIL("缩略图", "/uploads/thumbnails");
+    THUMBNAIL("缩略图", "/uploads/thumbnails"),
+    PNG("png", "/uploads/PNG"),
+    JPG("jpg", "/uploads/JPG"),
+    GIF("gif", "/uploads/GIF"),
+    JPEG("jpeg", "/uploads/JPEG");
     private final String text;
 
     private final String value;
@@ -29,5 +33,4 @@ public enum FileUploadBizEnum {
         return null;
     }
 
-//TODO:为格式也添加枚举例如：jpg,png,gif,jpeg
 }

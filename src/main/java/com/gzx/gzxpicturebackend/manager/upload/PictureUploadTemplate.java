@@ -86,7 +86,7 @@ public abstract class PictureUploadTemplate {
         }
 
     }
-    //  TODO：大文件的上传分片上传和断电续传
+    //  TODO：大文件的上传分片上传和断点续传
 
     /**
      * 校验输入源（本地文件或 URL）

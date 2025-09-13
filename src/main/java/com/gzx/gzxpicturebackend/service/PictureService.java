@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gzx.gzxpicturebackend.api.aliyunai.model.AiOutPaintingResponse;
 import com.gzx.gzxpicturebackend.model.dto.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.gzx.gzxpicturebackend.model.dto.entity.Space;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
+import com.gzx.gzxpicturebackend.model.dto.enums.SpaceTypeEnum;
 import com.gzx.gzxpicturebackend.model.dto.picture.*;
 import com.gzx.gzxpicturebackend.model.dto.vo.PictureVO;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public interface PictureService extends IService<Picture> {
     PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
+    void pictureUpdate(PictureUpdateRequest pictureUpdateRequest,HttpServletRequest request);
     QueryWrapper<Picture> getQueryWrapper(PictureQueryRequest pictureQueryRequest);
     PictureVO getPictureVO(Picture picture, HttpServletRequest request);
     Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request);
@@ -34,7 +37,7 @@ public interface PictureService extends IService<Picture> {
     void clearPictureFile(Picture oldPicture);
     List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
 
-    void fillReviewParams(Picture picture, User loginUser/*TODO:加入空间参数让私人空间是本人的话自动通过审核*/);
+    void fillReviewParams(Picture picture, User loginUser, Space space);
 
     @Transactional(rollbackFor = Exception.class)
     void batchEditPictureMetadata(PictureBatchEditRequest request, Long spaceId, Long loginUserId);

@@ -74,11 +74,15 @@ public class StpInterfaceImpl implements StpInterface {
         // 管理员权限，表示权限校验通过
         List<String> ADMIN_PERMISSIONS = spaceUserAuthManager.getPermissionsByRole(SpaceRoleEnum.ADMIN.getValue());
 
+        // 编辑者权限
+        List<String> EDTOR_PERMISSIONS = spaceUserAuthManager.getPermissionsByRole(SpaceRoleEnum.EDITOR.getValue());
+
         // 获取上下文对象
         SpaceUserAuthContext authContext = getAuthContextByRequest();
 
         // 如果所有字段都为空，表示查询公共图库，可以通过
         if (isAllFieldsNull(authContext)) {
+
             return Collections.singletonList(SpaceUserPermissionConstant.PICTURE_VIEW);
         }
 
@@ -135,7 +139,7 @@ public class StpInterfaceImpl implements StpInterface {
 
             // 图片 id 也没有，则默认通过权限校验
             if (pictureId == null) {
-                return ADMIN_PERMISSIONS;
+                return EDTOR_PERMISSIONS;
             }
 
 
@@ -156,12 +160,16 @@ public class StpInterfaceImpl implements StpInterface {
             if (spaceId == null) {
 
 
-                if (picture.getUserId().equals(userId) || userService.isAdmin(loginUser)) {
+                if (picture.getUserId().equals(userId) ) {
+                    return EDTOR_PERMISSIONS;
+                } else if( userService.isAdmin(loginUser)) {
                     return ADMIN_PERMISSIONS;
-                } else {
+                }else {
                     // 不是自己的图片，仅可查看
                     return Collections.singletonList(SpaceUserPermissionConstant.PICTURE_VIEW);
                 }
+
+
 
             }
 
@@ -179,9 +187,11 @@ public class StpInterfaceImpl implements StpInterface {
 
 
             // 私有空间，仅本人或管理员有权限
-            if (space.getUserId().equals(userId) || userService.isAdmin(loginUser)) {
+            if (space.getUserId().equals(userId) ) {
+                return EDTOR_PERMISSIONS;
+            } else if (userService.isAdmin(loginUser)){
                 return ADMIN_PERMISSIONS;
-            } else {
+            }else {
                 return new ArrayList<>();
             }
 
@@ -232,6 +242,7 @@ public class StpInterfaceImpl implements StpInterface {
             String body = ServletUtil.getBody(request);
             authRequest = JSONUtil.toBean(body, SpaceUserAuthContext.class);
         } else {
+
             Map<String, String> paramMap = ServletUtil.getParamMap(request);
             authRequest = BeanUtil.toBean(paramMap, SpaceUserAuthContext.class);
         }

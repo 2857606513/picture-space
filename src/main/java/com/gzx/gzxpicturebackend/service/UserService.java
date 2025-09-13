@@ -1,10 +1,10 @@
 package com.gzx.gzxpicturebackend.service;
 
-import cn.hutool.http.server.HttpServerRequest;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gzx.gzxpicturebackend.model.dto.user.UserQueryRequest;
+import com.gzx.gzxpicturebackend.model.dto.user.VipExchangeRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.LoginUserVO;
 import com.gzx.gzxpicturebackend.model.dto.vo.UserVO;
 
@@ -22,5 +22,15 @@ public interface UserService extends IService<User> {
     UserVO getUserVO(User user);
     List<UserVO> getUserVOList(List<User> userList);
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
-    boolean isAdmin(User user) ;
+    boolean isAdmin(User user);
+    
+    // VIP相关功能
+    boolean exchangeVip(VipExchangeRequest vipExchangeRequest, User loginUser);
+    boolean isVip(User user);
+    void checkVipStatus(User user);
+    
+    // 用户邀请功能
+    String generateShareCode(User user);
+    boolean registerWithInviteCode(String userAccount, String userPassword, String checkPassword, String inviteCode);
+    List<User> getInvitedUsers(Long userId);
 }

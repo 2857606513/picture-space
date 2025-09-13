@@ -12,6 +12,7 @@ import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.api.config.rule.ShardingTableRuleConfiguration;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -19,6 +20,7 @@ import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,7 +37,7 @@ public class DynamicShardingManager {
 
     private static final String LOGIC_TABLE_NAME = "picture";
 
-    private static final String DATABASE_NAME = "logic_db"; // 配置文件中的数据库名称
+    private static final String DATABASE_NAME = "gzx_picture"; // 配置文件中的数据库名称
 
     @PostConstruct
     public void initialize() {
@@ -47,9 +49,9 @@ public class DynamicShardingManager {
      * 获取所有动态表名，包括初始表 picture 和分表 picture_{spaceId}
      */
     private Set<String> fetchAllPictureTableNames() {
-        // todo:为了测试方便，直接对所有团队空间分表（实际上线改为仅对旗舰版生效）
         Set<Long> spaceIds = spaceService.lambdaQuery()
                 .eq(Space::getSpaceType, SpaceTypeEnum.TEAM.getValue())
+                .eq(Space::getSpaceLevel, SpaceLevelEnum.FLAGSHIP.getValue())
                 .list()
                 .stream()
                 .map(Space::getId)
@@ -114,16 +116,44 @@ public class DynamicShardingManager {
         if (space.getSpaceType() == SpaceTypeEnum.TEAM.getValue() && space.getSpaceLevel() == SpaceLevelEnum.FLAGSHIP.getValue()) {
             Long spaceId = space.getId();
             String tableName = LOGIC_TABLE_NAME + "_" + spaceId;
+
+            // 检查表是否已存在
+            if (isTableExists(tableName)) {
+                log.info("表 {} 已存在，跳过创建", tableName);
+                return;
+            }
+
             // 创建新表
             String createTableSql = "CREATE TABLE " + tableName + " LIKE " + LOGIC_TABLE_NAME;
             try {
                 SqlRunner.db().update(createTableSql);
+                log.info("成功创建图片空间分表: {}", tableName);
                 // 更新分表
                 updateShardingTableNodes();
             } catch (Exception e) {
-                e.printStackTrace();
-                log.error("创建图片空间分表失败，空间 id = {}", space.getId());
+                log.error("创建图片空间分表失败，空间 id = {}, 表名 = {}, 错误信息: {}",
+                    space.getId(), tableName, e.getMessage(), e);
+                // 重新抛出异常，确保事务回滚
+                throw new RuntimeException("创建图片空间分表失败: " + e.getMessage(), e);
             }
+        }
+    }
+
+    /**
+     * 检查表是否存在
+     */
+    private boolean isTableExists(String tableName) {
+        try {
+            String checkTableSql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '" + tableName + "'";
+            List<Map<String, Object>> result = SqlRunner.db().selectList(checkTableSql);
+            if (result != null && !result.isEmpty()) {
+                Object count = result.get(0).get("COUNT(*)");
+                return count != null && ((Number) count).intValue() > 0;
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("检查表是否存在时出错: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -35,6 +35,7 @@ public class SpaceUserAuthManager {
     public static final SpaceUserAuthConfig SPACE_USER_AUTH_CONFIG;
     private static final Map<String, List<String>> ROLE_PERMISSION_MAP = new HashMap<>();
     private static final List<String> ADMIN_PERMISSIONS;
+    private static final List<String> EDITOR_PERMISSIONS;
 
     static {
         try {
@@ -47,7 +48,7 @@ public class SpaceUserAuthManager {
                     ROLE_PERMISSION_MAP.put(role.getKey(), Collections.unmodifiableList(role.getPermissions()));
                 }
             }
-
+            EDITOR_PERMISSIONS = getPermissionsByRoleCached(SpaceRoleEnum.EDITOR.getValue());
             ADMIN_PERMISSIONS = getPermissionsByRoleCached(SpaceRoleEnum.ADMIN.getValue());
 
         } catch (Exception e) {
@@ -107,16 +108,17 @@ public class SpaceUserAuthManager {
         switch (spaceTypeEnum) {
             case PRIVATE:
                 // 私有空间，仅本人或管理员有所有权限
-                if (space.getUserId().equals(loginUser.getId()) || userService.isAdmin(loginUser)) {
-                    //todo：回看是否有空间逻辑是否在调用时判断只在私有空间操作
+                if (space.getUserId().equals(loginUser.getId()) ) {
+                    return EDITOR_PERMISSIONS;
+                } else if(userService.isAdmin(loginUser)) {
                     return ADMIN_PERMISSIONS;
-                } else {
+                }else {
                     return new ArrayList<>();
                 }
             case TEAM:
                 try {
                     SpaceUser spaceUser = spaceUserService.lambdaQuery()
-                            .eq(SpaceUser::getSpaceId, space.getId())//todo：新增团队空间管理员权限避免创建团队后拥有管理员权限
+                            .eq(SpaceUser::getSpaceId, space.getId())
                             .eq(SpaceUser::getUserId, loginUser.getId())
                             .one();
                     if (spaceUser == null) {

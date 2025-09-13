@@ -1,22 +1,20 @@
 package com.gzx.gzxpicturebackend.controller;
 
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gzx.gzxpicturebackend.annotation.AuthCheck;
 import com.gzx.gzxpicturebackend.common.BaseResponse;
 import com.gzx.gzxpicturebackend.common.DeleteRequest;
 import com.gzx.gzxpicturebackend.common.ResultUtils;
 import com.gzx.gzxpicturebackend.constant.UserConstant;
-import com.gzx.gzxpicturebackend.exception.BusinessException;
 import com.gzx.gzxpicturebackend.exception.ErrorCode;
 import com.gzx.gzxpicturebackend.exception.ThrowUtils;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.user.UserAddRequest;
 import com.gzx.gzxpicturebackend.model.dto.user.UserQueryRequest;
 import com.gzx.gzxpicturebackend.model.dto.user.UserRegisterRequest;
+import com.gzx.gzxpicturebackend.model.dto.user.UserRegisterWithInviteRequest;
 import com.gzx.gzxpicturebackend.model.dto.user.UserUpdateRequest;
+import com.gzx.gzxpicturebackend.model.dto.user.VipExchangeRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.LoginUserVO;
 import com.gzx.gzxpicturebackend.model.dto.vo.UserVO;
 import com.gzx.gzxpicturebackend.service.AdminService;
@@ -115,5 +113,53 @@ public class UserController {
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
         ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(AdminService.listUserVObyPage(userQueryRequest));
+    }
+    
+    /**
+     * VIP兑换
+     */
+    @PostMapping("/vip/exchange")
+    public BaseResponse<Boolean> exchangeVip(@RequestBody VipExchangeRequest vipExchangeRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(vipExchangeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        boolean result = userService.exchangeVip(vipExchangeRequest, loginUser);
+        return ResultUtils.success(result);
+    }
+    
+    /**
+     * 用户注册（带邀请码）
+     */
+    @PostMapping("/register/invite")
+    @AuthCheck(role = UserConstant.DEFAULT_ROLE)
+    public BaseResponse<Boolean> userRegisterWithInvite(@RequestBody UserRegisterWithInviteRequest userRegisterWithInviteRequest) {
+        ThrowUtils.throwIf(userRegisterWithInviteRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+        String userAccount = userRegisterWithInviteRequest.getUserAccount();
+        String userPassword = userRegisterWithInviteRequest.getUserPassword();
+        String checkPassword = userRegisterWithInviteRequest.getCheckPassword();
+        String inviteCode = userRegisterWithInviteRequest.getInviteCode();
+        
+        boolean result = userService.registerWithInviteCode(userAccount, userPassword, checkPassword, inviteCode);
+        return ResultUtils.success(result);
+    }
+    
+    /**
+     * 生成分享码
+     */
+    @PostMapping("/share/generate")
+    public BaseResponse<String> generateShareCode(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        String shareCode = userService.generateShareCode(loginUser);
+        return ResultUtils.success(shareCode);
+    }
+    
+    /**
+     * 获取邀请的用户列表
+     */
+    @GetMapping("/invite/list")
+    public BaseResponse<List<UserVO>> getInvitedUsers(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        List<User> invitedUsers = userService.getInvitedUsers(loginUser.getId());
+        List<UserVO> userVOList = userService.getUserVOList(invitedUsers);
+        return ResultUtils.success(userVOList);
     }
 }

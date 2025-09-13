@@ -25,6 +25,7 @@ public class SpaceUserQueryRequest implements Serializable {
      */
     private Long userId;
 
+    private String spaceUserId;
     /**
      * 空间角色：viewer/editor/admin
      */

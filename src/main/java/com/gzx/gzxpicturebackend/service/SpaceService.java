@@ -4,6 +4,7 @@ import com.gzx.gzxpicturebackend.model.dto.entity.Space;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gzx.gzxpicturebackend.model.dto.entity.User;
 import com.gzx.gzxpicturebackend.model.dto.space.SpaceAddRequest;
+import com.gzx.gzxpicturebackend.model.dto.space.SpaceUpdateRequest;
 import com.gzx.gzxpicturebackend.model.dto.vo.SpaceVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 */
 public interface SpaceService extends IService<Space> {
     long addSpace(SpaceAddRequest spaceAddRequest, User loginUser);
+    void updateSpace(SpaceUpdateRequest spaceUpdateRequest, HttpServletRequest request);
     void validSpace(Space space, boolean add);
     void fillSpaceBySpaceLevel(Space space);
 

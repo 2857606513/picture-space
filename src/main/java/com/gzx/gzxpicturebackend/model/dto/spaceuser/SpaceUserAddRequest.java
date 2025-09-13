@@ -24,7 +24,8 @@ public class SpaceUserAddRequest implements Serializable {
      * 空间角色：viewer/editor/admin
      */
     private String spaceRole;
-    //todo：可以添加一个成员id查询空间内是否有该成员
+
+    private Long spaceUserId;
 
     private static final long serialVersionUID = 1L;
 }

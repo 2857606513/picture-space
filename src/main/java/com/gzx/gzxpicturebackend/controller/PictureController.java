@@ -82,10 +82,6 @@ public class PictureController {
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, userService.getLoginUser(request));
         return ResultUtils.success(pictureVO);
     }
-
-    /**
-     * 通过 URL 上传图片（可重新上传）
-     */
     @PostMapping("/upload/url")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
     public BaseResponse<PictureVO> uploadPictureByUrl(
@@ -94,38 +90,22 @@ public class PictureController {
         PictureVO pictureVO = pictureService.uploadPicture( pictureUploadRequest.getFileUrl(), pictureUploadRequest,  userService.getLoginUser(request));
         return ResultUtils.success(pictureVO);
     }
-    @PostMapping("/delete")
-    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_DELETE)
-    public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest
-        , HttpServletRequest request) {
-        ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
-    pictureService.deletePicture(deleteRequest.getId(), userService.getLoginUser(request));
-    return ResultUtils.success(true);
-}
-
-
     @PostMapping("/update")
     @AuthCheck(role = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest,
-             /*TODO：把操作写入到service*/                                  HttpServletRequest request) {
+                                            HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
-        Picture picture = new Picture();
-        BeanUtils.copyProperties(pictureUpdateRequest, picture);
-        picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));
-        pictureService.validPicture(picture);
-        Picture oldPicture = pictureService.getById(pictureUpdateRequest.getId());
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-
-        pictureService.fillReviewParams(picture, userService.getLoginUser(request));
-
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        pictureService.pictureUpdate(pictureUpdateRequest, request);
         return ResultUtils.success(true);
     }
-
-    /**
-     * 根据 id 获取图片（仅管理员可用）
-     */
+    @PostMapping("/delete")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_DELETE)
+    public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest
+            , HttpServletRequest request) {
+        ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
+        pictureService.deletePicture(deleteRequest.getId(), userService.getLoginUser(request));
+        return ResultUtils.success(true);
+    }
     @GetMapping("/get")
     @AuthCheck(role = UserConstant.ADMIN_ROLE)
     public BaseResponse<Picture> getPictureById(long id, HttpServletRequest request) {
@@ -174,7 +154,7 @@ public class PictureController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
             pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
             pictureQueryRequest.setNullSpaceId(true);
-pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest));
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
@@ -184,7 +164,6 @@ pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
     @PostMapping("/edit")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
-       /*TODO：写到service中*/
         ThrowUtils.throwIf(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
       User loginUser = userService.getLoginUser(request);
       pictureService.editPicture(pictureEditRequest, loginUser);
@@ -200,7 +179,7 @@ pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
     }
-// TODO: 使用配置中心动态管理图片存储
+// TODO: 使用配置中心动态管理图片标签的存储
     @PostMapping("/review")
     @AuthCheck(role = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> PictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
@@ -305,7 +284,7 @@ pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .initialCapacity(512)
             .build();
-    //TODO:手动刷新缓存的接口仅管理员调用
+    //TODO:添加接口和service逻辑，手动刷新缓存的接口仅管理员调用
     /**
      * 创建 AI 扩图任务
      */

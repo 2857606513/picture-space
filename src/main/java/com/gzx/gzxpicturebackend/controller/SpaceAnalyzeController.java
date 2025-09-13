@@ -69,4 +69,28 @@ public class SpaceAnalyzeController {
         List<Space> allSpaces = spaceAnalyzeService.getAllSpaces(spaceRankAnalyzeRequest, loginUser);
         return ResultUtils.success(allSpaces);
     }
+    
+    @PostMapping("/level")
+    public BaseResponse<List<SpaceLevelAnalyzeResponse>> spaceLevelAnalyze(@RequestBody SpaceLevelAnalyzeRequest spaceLevelAnalyzeRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(spaceLevelAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        List<SpaceLevelAnalyzeResponse> spaceLevelAnalyzeResponse = spaceAnalyzeService.spaceLevelAnalyze(spaceLevelAnalyzeRequest, loginUser);
+        return ResultUtils.success(spaceLevelAnalyzeResponse);
+    }
+    
+    @PostMapping("/review")
+    public BaseResponse<List<PictureReviewAnalyzeResponse>> pictureReviewAnalyze(@RequestBody PictureReviewAnalyzeRequest pictureReviewAnalyzeRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureReviewAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        List<PictureReviewAnalyzeResponse> pictureReviewAnalyzeResponse = spaceAnalyzeService.pictureReviewAnalyze(pictureReviewAnalyzeRequest, loginUser);
+        return ResultUtils.success(pictureReviewAnalyzeResponse);
+    }
+    
+    @PostMapping("/activity")
+    public BaseResponse<List<UserActivityAnalyzeResponse>> userActivityAnalyze(@RequestBody UserActivityAnalyzeRequest userActivityAnalyzeRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(userActivityAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        List<UserActivityAnalyzeResponse> userActivityAnalyzeResponse = spaceAnalyzeService.userActivityAnalyze(userActivityAnalyzeRequest, loginUser);
+        return ResultUtils.success(userActivityAnalyzeResponse);
+    }
 }

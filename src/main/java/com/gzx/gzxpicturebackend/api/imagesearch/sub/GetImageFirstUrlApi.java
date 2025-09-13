@@ -13,47 +13,75 @@ import java.util.regex.Pattern;
 
 /**
  * 获取图片列表接口的 Api（Step 2）
+ * 用于从百度图片搜索结果页面中提取 firstUrl
  */
 @Slf4j
 public class GetImageFirstUrlApi {
-//TODO:需要改造
+
+    private static final int TIMEOUT = 10000; // 10秒超时
+    private static final Pattern FIRST_URL_PATTERN = Pattern.compile("\"firstUrl\"\\s*:\\s*\"([^\"]+)\"");
+
     /**
      * 获取图片列表页面地址
      *
-     * @param url
-     * @return
+     * @param url 目标网页URL
+     * @return 提取到的firstUrl
      */
     public static String getImageFirstUrl(String url) {
+        // 基本参数验证
+        if (url == null || url.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "URL不能为空");
+        }
+
         try {
+            log.info("开始获取图片列表页面地址，URL: {}", url);
+            
             // 使用 Jsoup 获取 HTML 内容
             Document document = Jsoup.connect(url)
-                    .timeout(5000)
+                    .timeout(TIMEOUT)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                     .get();
 
             // 获取所有 <script> 标签
             Elements scriptElements = document.getElementsByTag("script");
+            log.debug("找到 {} 个script标签", scriptElements.size());
 
             // 遍历找到包含 `firstUrl` 的脚本内容
             for (Element script : scriptElements) {
                 String scriptContent = script.html();
                 if (scriptContent.contains("\"firstUrl\"")) {
-                    // 正则表达式提取 firstUrl 的值
-                    Pattern pattern = Pattern.compile("\"firstUrl\"\\s*:\\s*\"(.*?)\"");
-                    Matcher matcher = pattern.matcher(scriptContent);
-                    if (matcher.find()) {
-                        String firstUrl = matcher.group(1);
-                        // 处理转义字符
-                        firstUrl = firstUrl.replace("\\/", "/");
+                    log.debug("找到包含firstUrl的script标签");
+                    String firstUrl = extractFirstUrl(scriptContent);
+                    if (firstUrl != null && !firstUrl.trim().isEmpty()) {
+                        log.info("成功提取firstUrl: {}", firstUrl);
                         return firstUrl;
                     }
                 }
             }
 
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未找到 url");
+            log.warn("未在页面中找到firstUrl，URL: {}", url);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "页面中未找到firstUrl");
+            
+        } catch (BusinessException e) {
+            // 重新抛出业务异常
+            throw e;
         } catch (Exception e) {
-            log.error("搜索失败", e);
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "搜索失败");
+            log.error("获取图片列表页面地址失败，URL: {}", url, e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取图片列表页面地址失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 从脚本内容中提取firstUrl
+     */
+    private static String extractFirstUrl(String scriptContent) {
+        Matcher matcher = FIRST_URL_PATTERN.matcher(scriptContent);
+        if (matcher.find()) {
+            String firstUrl = matcher.group(1);
+            // 处理转义字符
+            return firstUrl.replace("\\/", "/");
+        }
+        return null;
     }
 
     public static void main(String[] args) {
